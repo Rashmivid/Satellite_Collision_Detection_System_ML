@@ -1,96 +1,622 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Satellite Collision Detection System</title>
-    
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
-    
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="index.css">
-    
-    <!-- Globe.gl from CDN -->
-    <script src="https://unpkg.com/globe.gl"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>OrbitGuard — Satellite Intelligence</title>
+<script src="https://unpkg.com/globe.gl@2.27.2/dist/globe.gl.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#04070f;--surf:#090e1c;--panel:#0c1322;--card:#101828;
+  --b:#1a2744;--b2:#243358;
+  --accent:#38bdf8;--accent2:#818cf8;
+  --danger:#f87171;--warn:#fbbf24;--safe:#4ade80;--safeOrbit:#34d399;
+  --text:#c8d8f0;--muted:#4d6080;
+  --mono:'IBM Plex Mono',monospace;--sans:'Inter',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden}
+
+#shell{display:grid;grid-template-columns:280px 1fr 340px;height:100vh}
+#left{background:var(--panel);border-right:1px solid var(--b);display:flex;flex-direction:column;overflow:hidden}
+#center{position:relative;overflow:hidden;background:var(--bg)}
+#right{background:var(--panel);border-left:1px solid var(--b);display:flex;flex-direction:column;overflow:hidden}
+
+/* Logo */
+.logo{padding:16px 16px 12px;border-bottom:1px solid var(--b);flex-shrink:0}
+.logo-name{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--accent);letter-spacing:3px}
+.logo-sub{font-size:10px;color:var(--muted);letter-spacing:1px;margin-top:2px}
+
+/* Section header */
+.shdr{padding:9px 14px;border-bottom:1px solid var(--b);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.shdr-title{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+.sbadge{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:2px}
+.bd-danger{background:rgba(248,113,113,.12);color:var(--danger);border:1px solid rgba(248,113,113,.3)}
+.bd-safe{background:rgba(74,222,128,.1);color:var(--safe);border:1px solid rgba(74,222,128,.3)}
+.bd-accent{background:rgba(56,189,248,.1);color:var(--accent);border:1px solid rgba(56,189,248,.3)}
+
+/* Controls */
+.ctrl-body{padding:12px 14px;overflow-y:auto}
+.cg{margin-bottom:11px}
+.cl{font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:5px;display:block;text-transform:uppercase}
+.cs,.ci-field{width:100%;background:var(--surf);border:1px solid var(--b);color:var(--text);font-family:var(--mono);font-size:11px;padding:7px 9px;border-radius:4px;outline:none;appearance:none}
+.cs:focus,.ci-field:focus{border-color:var(--accent)}
+.crow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{width:100%;padding:9px 0;border-radius:4px;font-family:var(--mono);font-size:10px;letter-spacing:2px;cursor:pointer;transition:all .2s;border:none;text-transform:uppercase;margin-top:4px}
+.btn-primary{background:var(--accent);color:#04070f;font-weight:600}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-primary:disabled{opacity:.35;cursor:not-allowed}
+.btn-outline{background:transparent;border:1px solid var(--safeOrbit);color:var(--safeOrbit)}
+.btn-outline:hover{background:rgba(52,211,153,.08)}
+.btn-outline:disabled{opacity:.3;cursor:not-allowed}
+.btn.spin{animation:btnpulse 1s ease-in-out infinite}
+@keyframes btnpulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Risk cards */
+.risk-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:10px 12px;border-bottom:1px solid var(--b);flex-shrink:0}
+.rc{background:var(--surf);border:1px solid var(--b);border-radius:5px;padding:8px 6px;text-align:center}
+.rc-n{font-family:var(--mono);font-size:20px;font-weight:600}
+.rc-l{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:1px}
+.rch .rc-n{color:var(--danger)}.rcm .rc-n{color:var(--warn)}.rcs .rc-n{color:var(--safe)}
+
+/* Conjunction list */
+.clist{overflow-y:auto;flex:1;min-height:0}
+.ci{padding:9px 13px;border-bottom:1px solid rgba(26,39,68,.6);cursor:pointer;transition:background .12s}
+.ci:hover{background:rgba(56,189,248,.04)}
+.ci.sel{background:rgba(56,189,248,.07);border-left:2px solid var(--accent)}
+.ci-top{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:3px}
+.ci-names{font-family:var(--mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.rpill{font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:2px;white-space:nowrap;flex-shrink:0}
+.rpH{background:rgba(248,113,113,.12);color:var(--danger);border:1px solid rgba(248,113,113,.3)}
+.rpM{background:rgba(251,191,36,.1);color:var(--warn);border:1px solid rgba(251,191,36,.25)}
+.rpS{background:rgba(74,222,128,.08);color:var(--safe);border:1px solid rgba(74,222,128,.25)}
+.ci-sub{font-size:9px;color:var(--muted);font-family:var(--mono)}
+.ci-bar{height:2px;background:var(--b);border-radius:1px;overflow:hidden;margin-top:4px}
+.ci-fill{height:100%;border-radius:1px;transition:width .3s}
+
+/* Right panel */
+.right-scroll{overflow-y:auto;flex:1;min-height:0}
+.empty-state{padding:36px 20px;text-align:center;color:var(--muted);font-size:12px;line-height:1.8}
+.empty-icon{font-size:26px;opacity:.2;margin-bottom:8px}
+
+/* Detail */
+.det{padding:14px}
+.det-name{font-family:var(--mono);font-size:12px;color:var(--accent);margin-bottom:12px;word-break:break-all;line-height:1.4}
+.kv-grid{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin-bottom:12px;background:var(--surf);border:1px solid var(--b);border-radius:5px;padding:10px}
+.kk{font-family:var(--mono);font-size:9px;color:var(--muted);padding:2px 0;letter-spacing:.5px}
+.kv{font-family:var(--mono);font-size:9px;color:var(--text);padding:2px 0;text-align:right}
+
+/* Risk block */
+.rblock{background:var(--surf);border:1px solid var(--b);border-radius:5px;padding:12px;margin-bottom:12px}
+.rblock-title{font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--accent2);margin-bottom:8px;text-transform:uppercase}
+.rbig{font-family:var(--mono);font-size:15px;font-weight:600;margin-bottom:8px}
+.prow{display:grid;grid-template-columns:68px 1fr 32px;align-items:center;gap:6px;margin-bottom:5px}
+.plabel{font-family:var(--mono);font-size:8px;color:var(--muted)}
+.ptrack{height:3px;background:var(--b);border-radius:2px;overflow:hidden}
+.pfill{height:100%;border-radius:2px}
+.ppct{font-family:var(--mono);font-size:8px;color:var(--muted);text-align:right}
+
+/* Neighbours */
+.nb-item{display:flex;align-items:center;padding:5px 0;border-bottom:1px solid rgba(26,39,68,.5);gap:6px}
+.nb-item:last-child{border:none}
+.nb-name{font-family:var(--mono);font-size:10px;color:var(--accent);cursor:pointer;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nb-name:hover{text-decoration:underline}
+.nb-dist{font-family:var(--mono);font-size:9px;color:var(--muted);white-space:nowrap}
+.nb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* Safe slots */
+.slot-item{background:var(--surf);border:1px solid rgba(52,211,153,.2);border-radius:4px;padding:9px 10px;margin-bottom:6px;cursor:pointer;transition:border-color .15s}
+.slot-item:hover{border-color:var(--safeOrbit);background:rgba(52,211,153,.04)}
+.slot-alt{font-family:var(--mono);font-size:12px;color:var(--safeOrbit);font-weight:600}
+.slot-detail{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:3px}
+.slot-clear{font-family:var(--mono);font-size:9px;color:var(--safe);margin-top:2px}
+
+/* Globe overlays */
+#spinner{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:8px;background:rgba(4,7,15,.6);backdrop-filter:blur(3px);z-index:20}
+#spinner.on{display:flex}
+.spin-ring{width:40px;height:40px;border:1.5px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin-txt{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:2px}
+
+/* HUD */
+#hud{position:absolute;bottom:0;left:0;right:0;padding:7px 14px;background:rgba(9,14,28,.8);backdrop-filter:blur(4px);border-top:1px solid var(--b);display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:9px;color:var(--muted);z-index:10}
+.hud-dot{width:5px;height:5px;border-radius:50%;background:var(--safe);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+#hud-clock{margin-left:auto;color:var(--accent)}
+
+/* Error bar */
+#errbar{position:absolute;top:0;left:0;right:0;background:rgba(248,113,113,.12);border-bottom:1px solid rgba(248,113,113,.3);padding:5px 14px;font-family:var(--mono);font-size:10px;color:var(--danger);z-index:30;display:none}
+
+/* Legend */
+#legend{position:absolute;top:12px;right:12px;background:rgba(9,14,28,.85);border:1px solid var(--b);border-radius:5px;padding:8px 10px;font-family:var(--mono);font-size:9px;z-index:10}
+.leg-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;color:var(--muted)}
+.leg-row:last-child{margin:0}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.leg-ring{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--safeOrbit);flex-shrink:0}
+
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+</style>
 </head>
 <body>
-    <div id="app-container">
-        
-        <!-- Background 3D Globe Container -->
-        <div id="globeViz"></div>
-        
-        <!-- Overlay UI Panel -->
-        <aside class="control-panel">
-            <div class="panel-header">
-                <div class="glow-dot"></div>
-                <h1>ORBITAL<br><span>DEFENSE</span></h1>
-            </div>
-            
-            <p class="subtitle">Real-time Satellite Conjunction Analysis</p>
-            
-            <div class="controls-section">
-                <h3>Simulation Parameters</h3>
-                
-                <div class="control-group">
-                    <label for="group-select">Constellation</label>
-                    <div class="select-wrapper">
-                        <select id="group-select">
-                            <option value="starlink">Starlink</option>
-                            <option value="active">All Active</option>
-                            <option value="iridium">Iridium NEXT</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="control-row">
-                    <div class="control-group half">
-                        <label for="duration-input">Duration (m)</label>
-                        <input type="number" id="duration-input" value="60" min="10" max="1440">
-                    </div>
-                    
-                    <div class="control-group half">
-                        <label for="threshold-input">Threshold (km)</label>
-                        <input type="number" id="threshold-input" value="10.0" step="0.5">
-                    </div>
-                </div>
-                
-                <div class="control-group">
-                    <label for="limit-input">Max Satellites (Limit for speed)</label>
-                    <input type="number" id="limit-input" value="500" min="10">
-                </div>
-                
-                <button id="run-btn" class="primary-btn">
-                    <span>INITIALIZE SCAN</span>
-                    <div class="btn-glow"></div>
-                </button>
-            </div>
-            
-            <div class="results-section">
-                <div class="results-header">
-                    <h3>Predicted Conjunctions</h3>
-                    <span id="threat-count" class="badge bg-green">0</span>
-                </div>
-                
-                <div id="loader" class="hidden">
-                    <div class="spinner"></div>
-                    <p>Propagating orbits and calculating distances...</p>
-                </div>
-                
-                <div id="alerts-container">
-                    <!-- Alerts will be injected here via JS -->
-                    <div class="empty-state">
-                        <p>No active threats detected.<br>Run scan to populate.</p>
-                    </div>
-                </div>
-            </div>
-            
-        </aside>
+<div id="shell">
+
+  <!-- LEFT -->
+  <div id="left">
+    <div class="logo">
+      <div class="logo-name">ORBITGUARD</div>
+      <div class="logo-sub">Satellite Collision Intelligence</div>
     </div>
-    
-    <!-- Custom JS -->
-    <script src="app.js"></script>
+
+    <div class="shdr">
+      <span class="shdr-title">Scan Configuration</span>
+      <span id="stgnn-pill" class="sbadge bd-accent">STGNN ◌</span>
+    </div>
+    <div class="ctrl-body">
+      <div class="cg">
+        <label class="cl">Constellation</label>
+        <!-- VALUES match CELESTRAK_GROUPS keys in data_fetcher.py -->
+        <select class="cs" id="group-sel">
+          <option value="starlink">Starlink</option>
+          <option value="stations">Space Stations</option>
+          <option value="active">All Active</option>
+          <option value="iridium">Iridium NEXT</option>
+          <option value="weather">Weather</option>
+          <option value="gps">GPS</option>
+          <option value="oneweb">OneWeb</option>
+        </select>
+      </div>
+      <div class="crow cg">
+        <div><label class="cl">Duration (min)</label>
+          <input class="ci-field" type="number" id="duration" value="60" min="5" max="1440"/></div>
+        <div><label class="cl">Threshold (km)</label>
+          <input class="ci-field" type="number" id="threshold" value="20" min="1" max="500"/></div>
+      </div>
+      <div class="cg">
+        <label class="cl">Satellite Limit</label>
+        <input class="ci-field" type="number" id="limit" value="500" min="50" max="3000"/>
+      </div>
+      <button class="btn btn-primary" id="scan-btn" onclick="runScan()">▶ Initiate Scan</button>
+    </div>
+
+    <div class="risk-row">
+      <div class="rc rch"><div class="rc-n" id="cnt-h">—</div><div class="rc-l">High</div></div>
+      <div class="rc rcm"><div class="rc-n" id="cnt-m">—</div><div class="rc-l">Mod</div></div>
+      <div class="rc rcs"><div class="rc-n" id="cnt-s">—</div><div class="rc-l">Safe</div></div>
+    </div>
+
+    <div class="shdr">
+      <span class="shdr-title">Conjunctions</span>
+      <span class="sbadge bd-danger" id="conj-badge">0</span>
+    </div>
+    <div class="clist" id="clist">
+      <div class="empty-state" style="padding:16px;font-size:11px">Run scan to detect conjunctions</div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div id="center">
+    <div id="globe"></div>
+    <div id="spinner"><div class="spin-ring"></div><div class="spin-txt" id="spin-txt">Scanning…</div></div>
+    <div id="errbar" id="errbar"></div>
+    <div id="legend">
+      <div class="leg-row"><div class="leg-dot" style="background:var(--danger)"></div>High risk</div>
+      <div class="leg-row"><div class="leg-dot" style="background:var(--warn)"></div>Moderate</div>
+      <div class="leg-row"><div class="leg-dot" style="background:var(--safe)"></div>Safe</div>
+      <div class="leg-row"><div class="leg-ring"></div>Safe orbit slot</div>
+    </div>
+    <div id="hud">
+      <div class="hud-dot"></div>
+      <span id="hud-status">Awaiting scan</span>
+      <span id="hud-sats"></span>
+      <span id="hud-clock"></span>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div id="right">
+    <div class="shdr">
+      <span class="shdr-title" id="right-title">Conjunction Detail</span>
+    </div>
+    <div class="right-scroll" id="right-scroll">
+      <div class="empty-state">
+        <div class="empty-icon">◎</div>
+        Click any satellite dot on the globe, or select a conjunction from the list.<br><br>
+        You'll see STGNN risk analysis, orbital parameters, nearest neighbours, and safe orbit recommendations.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let G = null;
+let satellites = [];
+let conjunctions = [];
+let safeSlots = [];
+let selectedSatName = null;
+let conjSelIdx = -1;
+let currentGroup = 'starlink';
+
+// ── Clock ─────────────────────────────────────────────────────────────────────
+setInterval(() => {
+  document.getElementById('hud-clock').textContent =
+    new Date().toUTCString().slice(5,25) + ' UTC';
+}, 1000);
+
+// ── Error bar ─────────────────────────────────────────────────────────────────
+function showErr(msg) {
+  const el = document.getElementById('errbar');
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 8000);
+}
+
+// ── Globe ─────────────────────────────────────────────────────────────────────
+function initGlobe() {
+  const el = document.getElementById('globe');
+  G = Globe()(el)
+    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
+    .backgroundColor('rgba(0,0,0,0)')
+    .atmosphereColor('#38bdf8')
+    .atmosphereAltitude(0.14)
+    // Satellite dots
+    .pointsData([])
+    .pointLat(d => d.lat)
+    .pointLng(d => d.lng)
+    .pointAltitude(d => Math.min((d.elev_km || 400) / 6371, 0.2))
+    .pointColor(d => d.name === selectedSatName ? '#ffffff' : (d.risk_color || '#38bdf8'))
+    .pointRadius(d => d.name === selectedSatName ? 0.7 : 0.3)
+    .pointLabel(d => `
+      <div style="font-family:monospace;font-size:11px;background:#090e1c;border:1px solid #1a2744;padding:5px 9px;border-radius:4px;color:#c8d8f0;line-height:1.6;pointer-events:none">
+        <strong style="color:#38bdf8">${d.name}</strong><br>
+        Alt: ${d.elev_km||'—'} km &nbsp; Risk: <span style="color:${d.risk_color||'#38bdf8'}">${d.stgnn_risk||'—'}</span><br>
+        <span style="color:#4d6080;font-size:10px">Click to select & find safe orbits</span>
+      </div>`)
+    .onPointClick((d) => {
+      if (d && d.name) selectSatellite(d.name);
+    })
+    // Conjunction arcs
+    .arcsData([])
+    .arcStartLat(d=>d.sLat).arcStartLng(d=>d.sLng)
+    .arcEndLat(d=>d.eLat).arcEndLng(d=>d.eLng)
+    .arcColor(d=>d.color)
+    .arcAltitude(0.06).arcStroke(1.2)
+    .arcDashLength(0.35).arcDashGap(0.15).arcDashAnimateTime(2200)
+    // Safe orbit rings
+    .ringsData([])
+    .ringLat(d=>d.lat).ringLng(d=>d.lng)
+    .ringColor(()=>'#34d399')
+    .ringMaxRadius(2.5).ringPropagationSpeed(1).ringRepeatPeriod(900);
+
+  G.controls().autoRotate = true;
+  G.controls().autoRotateSpeed = 0.3;
+  resizeGlobe();
+  window.addEventListener('resize', resizeGlobe);
+}
+
+function resizeGlobe() {
+  const c = document.getElementById('center');
+  if (G) G.width(c.offsetWidth).height(c.offsetHeight);
+}
+
+function refreshGlobeDots() {
+  if (!G) return;
+  G.pointsData([...satellites])  // spread forces re-render
+   .pointColor(d => d.name === selectedSatName ? '#ffffff' : (d.risk_color || '#38bdf8'))
+   .pointRadius(d => d.name === selectedSatName ? 0.7 : 0.3);
+}
+
+// ── Status check ──────────────────────────────────────────────────────────────
+async function checkStatus() {
+  try {
+    const d = await fetch('/api/status').then(r=>r.json());
+    const el = document.getElementById('stgnn-pill');
+    if (d.stgnn_loaded) {
+      el.textContent = 'STGNN ●';
+      el.style.cssText = 'font-family:monospace;font-size:9px;padding:2px 6px;border-radius:2px;background:rgba(74,222,128,.1);color:#4ade80;border:1px solid rgba(74,222,128,.3)';
+    }
+  } catch(e) {}
+}
+
+// ── Load satellite dots ───────────────────────────────────────────────────────
+async function loadSatellites(silent) {
+  const group = document.getElementById('group-sel').value;
+  const limit = document.getElementById('limit').value;
+  currentGroup = group;
+  try {
+    const d = await fetch(`/api/satellites?group=${group}&limit=${limit}`).then(r=>r.json());
+    if (d.status === 'success') {
+      satellites = d.satellites || [];
+      refreshGlobeDots();
+      document.getElementById('hud-sats').textContent = satellites.length + ' satellites';
+      if (!silent) setStatus(satellites.length + ' satellites loaded');
+    } else {
+      showErr(d.message || 'Failed to load satellites');
+    }
+  } catch(e) { showErr('Network error loading satellites'); }
+}
+
+// ── Scan ──────────────────────────────────────────────────────────────────────
+async function runScan() {
+  const btn = document.getElementById('scan-btn');
+  btn.disabled = true; btn.classList.add('spin'); btn.textContent = '⟳ Scanning…';
+  showSpinner('Propagating orbits…');
+  setStatus('Scanning…');
+  clearSafeSlots();
+
+  const payload = {
+    group:     document.getElementById('group-sel').value,
+    duration:  +document.getElementById('duration').value,
+    step:      60,
+    threshold: +document.getElementById('threshold').value,
+    limit:     +document.getElementById('limit').value,
+  };
+  currentGroup = payload.group;
+
+  try {
+    const d = await fetch('/api/detect', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    }).then(r=>r.json());
+
+    if (d.status === 'success') {
+      conjunctions = d.conjunctions || [];
+      renderConjList();
+      updateRiskCards(d.risk_summary);
+      await loadSatellites(true);
+      renderArcs();
+      setStatus(`${d.total_satellites} sats · ${conjunctions.length} conjunctions`);
+    } else {
+      showErr(d.message || 'Scan failed');
+      setStatus('Scan error', true);
+    }
+  } catch(e) { showErr('Connection error — is the server running?'); setStatus('Error', true); }
+
+  btn.disabled = false; btn.classList.remove('spin'); btn.textContent = '▶ Initiate Scan';
+  hideSpinner();
+}
+
+// ── Conjunction list ──────────────────────────────────────────────────────────
+function renderConjList() {
+  const el = document.getElementById('clist');
+  document.getElementById('conj-badge').textContent = conjunctions.length;
+  if (!conjunctions.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:16px;font-size:11px">No conjunctions detected</div>';
+    return;
+  }
+  el.innerHTML = conjunctions.map((c, i) => {
+    const pillCls = c.stgnn_risk==='HIGH_RISK'?'rpH':c.stgnn_risk==='MODERATE_RISK'?'rpM':'rpS';
+    const pillTxt = c.stgnn_risk==='HIGH_RISK'?'HIGH':c.stgnn_risk==='MODERATE_RISK'?'MOD':'SAFE';
+    const pHigh   = Math.round((c.prob_high||0)*100);
+    return `
+    <div class="ci ${i===conjSelIdx?'sel':''}" onclick="selectConj(${i})">
+      <div class="ci-top">
+        <div class="ci-names" title="${c.sat1}">${c.sat1}</div>
+        <span class="rpill ${pillCls}">${pillTxt}</span>
+      </div>
+      <div class="ci-sub">${c.sat2} · ${(c.distance_km||0).toFixed(2)} km</div>
+      <div class="ci-bar"><div class="ci-fill" style="width:${pHigh}%;background:var(--danger)"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function updateRiskCards(s) {
+  if (!s) return;
+  document.getElementById('cnt-h').textContent = s.HIGH_RISK     ?? '—';
+  document.getElementById('cnt-m').textContent = s.MODERATE_RISK ?? '—';
+  document.getElementById('cnt-s').textContent = s.SAFE          ?? '—';
+}
+
+function renderArcs() {
+  if (!G) return;
+  const arcs = conjunctions.slice(0,30).map(c => {
+    const s1 = satellites.find(s=>s.name===c.sat1);
+    const s2 = satellites.find(s=>s.name===c.sat2);
+    if (!s1||!s2) return null;
+    return {sLat:s1.lat,sLng:s1.lng,eLat:s2.lat,eLng:s2.lng,color:c.risk_color||'#f87171'};
+  }).filter(Boolean);
+  G.arcsData(arcs);
+}
+
+function selectConj(i) {
+  conjSelIdx = i;
+  renderConjList();
+  const c = conjunctions[i];
+  selectSatellite(c.sat1);
+  const s1 = satellites.find(s=>s.name===c.sat1);
+  const s2 = satellites.find(s=>s.name===c.sat2);
+  if (s1&&s2) G.pointOfView({lat:(s1.lat+s2.lat)/2,lng:(s1.lng+s2.lng)/2,altitude:2.2},900);
+}
+
+// ── Satellite select ──────────────────────────────────────────────────────────
+async function selectSatellite(name) {
+  selectedSatName = name;
+  refreshGlobeDots();
+  clearSafeSlots();
+
+  document.getElementById('right-title').textContent = name.length > 20 ? name.slice(0,20)+'…' : name;
+  document.getElementById('right-scroll').innerHTML =
+    `<div style="padding:30px;text-align:center;color:var(--muted);font-family:monospace;font-size:10px;letter-spacing:1px">Loading…</div>`;
+
+  // Fly to it
+  const sat = satellites.find(s=>s.name===name);
+  if (sat) G.pointOfView({lat:sat.lat,lng:sat.lng,altitude:2.4},800);
+
+  try {
+    const url = `/api/satellite/${encodeURIComponent(name)}?group=${currentGroup}&limit=${document.getElementById('limit').value}`;
+    const d = await fetch(url).then(r=>r.json());
+    if (d.status==='success') renderSatDetail(d);
+    else {
+      // satellite not in cache yet — show what we know from dot data
+      if (sat) renderSatFromDot(sat);
+      else showErr('Satellite detail not found');
+    }
+  } catch(e) {
+    if (sat) renderSatFromDot(sat);
+  }
+}
+
+function renderSatFromDot(sat) {
+  // Minimal detail from globe dot data when full API fails
+  document.getElementById('right-scroll').innerHTML = `
+    <div class="det">
+      <div class="det-name">${sat.name}</div>
+      <div class="kv-grid">
+        <span class="kk">Elevation</span><span class="kv">${sat.elev_km||'—'} km</span>
+        <span class="kk">Lat</span><span class="kv">${(sat.lat||0).toFixed(2)}°</span>
+        <span class="kk">Lng</span><span class="kv">${(sat.lng||0).toFixed(2)}°</span>
+        <span class="kk">STGNN Risk</span><span class="kv" style="color:${sat.risk_color||'#4ade80'}">${sat.stgnn_risk||'—'}</span>
+      </div>
+      <button class="btn btn-outline" onclick="findSafeOrbits('${sat.name}')">◈ Find safe orbital slots</button>
+      <div id="safe-results"></div>
+    </div>`;
+}
+
+function renderSatDetail(d) {
+  const r = d.risk    || {};
+  const o = d.orbital || {};
+  const p = d.position|| {};
+  const rc = r.risk_color || '#4ade80';
+  const pSafe = Math.round((r.prob_safe||0)*100);
+  const pHigh = Math.round((r.prob_high||0)*100);
+  const pMod  = Math.max(0, 100 - pSafe - pHigh);
+
+  const nbHtml = (d.neighbours||[]).map(n => `
+    <div class="nb-item">
+      <span class="nb-name" onclick="selectSatellite('${n.name}')">${n.name}</span>
+      <span class="nb-dist">${n.approx_dist_km} km</span>
+      <div class="nb-dot" style="background:${n.risk_color||'#4ade80'}"></div>
+    </div>`).join('');
+
+  document.getElementById('right-scroll').innerHTML = `
+    <div class="det">
+      <div class="det-name">${d.name}</div>
+
+      <div class="kv-grid">
+        <span class="kk">Altitude</span>  <span class="kv">${o.altitude_km||'—'} km</span>
+        <span class="kk">Inclination</span><span class="kv">${o.inclination||'—'}°</span>
+        <span class="kk">Period</span>    <span class="kv">${o.period_min||'—'} min</span>
+        <span class="kk">Eccentricity</span><span class="kv">${o.eccentricity||'—'}</span>
+        <span class="kk">Lat / Lng</span> <span class="kv">${(p.lat||0).toFixed(2)}° / ${(p.lng||0).toFixed(2)}°</span>
+        <span class="kk">Elevation</span> <span class="kv">${p.elev_km||'—'} km</span>
+      </div>
+
+      <div class="rblock">
+        <div class="rblock-title">STGNN Risk Analysis</div>
+        <div class="rbig" style="color:${rc}">${r.stgnn_risk||'—'}</div>
+        <div class="prow">
+          <div class="plabel">Safe</div>
+          <div class="ptrack"><div class="pfill" style="width:${pSafe}%;background:var(--safe)"></div></div>
+          <div class="ppct">${pSafe}%</div>
+        </div>
+        <div class="prow">
+          <div class="plabel">Moderate</div>
+          <div class="ptrack"><div class="pfill" style="width:${pMod}%;background:var(--warn)"></div></div>
+          <div class="ppct">${pMod}%</div>
+        </div>
+        <div class="prow">
+          <div class="plabel">High Risk</div>
+          <div class="ptrack"><div class="pfill" style="width:${pHigh}%;background:var(--danger)"></div></div>
+          <div class="ppct">${pHigh}%</div>
+        </div>
+      </div>
+
+      ${nbHtml ? `
+        <div class="shdr" style="margin:0 -14px 10px;padding:7px 14px">
+          <span class="shdr-title">Nearest satellites</span>
+        </div>
+        <div style="margin-bottom:12px">${nbHtml}</div>` : ''}
+
+      <button class="btn btn-outline" id="safe-btn" onclick="findSafeOrbits('${d.name}')">
+        ◈ Find safe orbital slots
+      </button>
+      <div id="safe-results"></div>
+    </div>`;
+}
+
+// ── Safe orbit finder ─────────────────────────────────────────────────────────
+async function findSafeOrbits(name) {
+  const btn = document.getElementById('safe-btn');
+  if (btn) { btn.disabled=true; btn.textContent='⟳ Calculating…'; }
+  clearSafeSlots();
+
+  try {
+    const d = await fetch('/api/safe-orbits', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name, group: currentGroup,
+        limit: +document.getElementById('limit').value
+      })
+    }).then(r=>r.json());
+
+    if (d.status==='success') {
+      safeSlots = d.safe_slots || [];
+      renderSafeResults(d);
+      G.ringsData(safeSlots.map(s => ({lat:s.lat, lng:s.lng})));
+    } else {
+      showErr(d.message || 'Safe orbit search failed');
+    }
+  } catch(e) { showErr('Error finding safe orbits'); }
+
+  if (btn) { btn.disabled=false; btn.textContent='◈ Find safe orbital slots'; }
+}
+
+function renderSafeResults(d) {
+  const el = document.getElementById('safe-results');
+  if (!el) return;
+  const ref   = d.reference_orbit || {};
+  const slots = d.safe_slots || [];
+
+  el.innerHTML = `
+    <div class="shdr" style="margin:12px -14px 10px;padding:7px 14px">
+      <span class="shdr-title">Safe orbital slots</span>
+      <span class="sbadge bd-safe">${slots.length} found</span>
+    </div>
+    <div style="font-family:monospace;font-size:9px;color:var(--muted);margin-bottom:8px;line-height:1.7">
+      Reference: <span style="color:var(--text)">${ref.altitude_km||'—'} km · ${ref.inclination||'—'}° inc</span><br>
+      Unoccupied slots within ±200 km altitude, ±15° inclination
+    </div>
+    ${slots.map((s,i) => `
+      <div class="slot-item" onclick="flyToSlot(${i})">
+        <div class="slot-alt">${s.altitude_km} km</div>
+        <div class="slot-detail">Inclination: ${s.inclination}° &nbsp;·&nbsp; ${s.lat}°, ${s.lng}°</div>
+        <div class="slot-clear">Clearance: ${s.clearance_km} km from nearest satellite</div>
+      </div>`).join('')}`;
+}
+
+function flyToSlot(i) {
+  const s = safeSlots[i];
+  if (s && G) G.pointOfView({lat:s.lat, lng:s.lng, altitude:2.0}, 700);
+}
+
+function clearSafeSlots() {
+  safeSlots = [];
+  if (G) G.ringsData([]);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function setStatus(txt, err) {
+  const el = document.getElementById('hud-status');
+  el.textContent = txt;
+  el.style.color = err ? 'var(--danger)' : '';
+}
+function showSpinner(txt) {
+  document.getElementById('spin-txt').textContent = txt||'Processing…';
+  document.getElementById('spinner').classList.add('on');
+}
+function hideSpinner() {
+  document.getElementById('spinner').classList.remove('on');
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+initGlobe();
+checkStatus();
+loadSatellites();
+setInterval(() => loadSatellites(true), 15000); // refresh positions every 15s
+</script>
 </body>
 </html>

@@ -1,0 +1,58 @@
+{
+  "all_features": [
+    "MEAN_MOTION",
+    "ECCENTRICITY",
+    "SEMI_MAJOR_AXIS",
+    "PERIGEE_ALT",
+    "APOGEE_ALT",
+    "MEAN_ALT",
+    "ORBITAL_PERIOD",
+    "VELOCITY",
+    "INCLINATION_SIN",
+    "INCLINATION_COS",
+    "RA_OF_ASC_NODE_SIN",
+    "RA_OF_ASC_NODE_COS",
+    "ARG_OF_PERICENTER_SIN",
+    "ARG_OF_PERICENTER_COS",
+    "MEAN_ANOMALY_SIN",
+    "MEAN_ANOMALY_COS",
+    "BSTAR",
+    "MEAN_MOTION_DOT",
+    "MEAN_MOTION_DDOT",
+    "EPOCH_TIMESTAMP",
+    "DAY_OF_YEAR",
+    "ORBIT_TYPE_ENCODED"
+  ],
+  "orbital_features": [
+    "MEAN_MOTION",
+    "ECCENTRICITY",
+    "SEMI_MAJOR_AXIS",
+    "PERIGEE_ALT",
+    "APOGEE_ALT",
+    "MEAN_ALT",
+    "ORBITAL_PERIOD",
+    "VELOCITY"
+  ],
+  "angular_features": [
+    "INCLINATION_SIN",
+    "INCLINATION_COS",
+    "RA_OF_ASC_NODE_SIN",
+    "RA_OF_ASC_NODE_COS",
+    "ARG_OF_PERICENTER_SIN",
+    "ARG_OF_PERICENTER_COS",
+    "MEAN_ANOMALY_SIN",
+    "MEAN_ANOMALY_COS"
+  ],
+  "perturbation_features": [
+    "BSTAR",
+    "MEAN_MOTION_DOT",
+    "MEAN_MOTION_DDOT"
+  ],
+  "temporal_features": [
+    "EPOCH_TIMESTAMP",
+    "DAY_OF_YEAR"
+  ],
+  "categorical_features": [
+    "ORBIT_TYPE_ENCODED"
+  ]
+}
