@@ -4,7 +4,6 @@ A full-stack satellite collision monitoring and AI-powered risk prediction platf
 
 The system fetches live TLE data, propagates satellite orbits using SGP4/Skyfield, detects potential close approaches via vectorized distance calculations, and uses a **Spatio-Temporal Graph Neural Network (STGNN)** to classify collision risk levels with **95–98% accuracy**.
 
-![Dashboard](satellite_scan_complete_1773066956021.png)
 ![Dashboard](Orbit_guard.png)
 
 ---
