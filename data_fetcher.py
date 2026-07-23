@@ -31,6 +31,10 @@ DIRECT_URLS = {
     'weather':  'https://celestrak.org/NORAD/elements/weather.txt',
     'active':   'https://celestrak.org/NORAD/elements/active.txt',
     'debris':   'https://celestrak.org/NORAD/elements/2012-044.txt',
+    'starlink': 'https://celestrak.org/NORAD/elements/starlink.txt',
+    'iridium':  'https://celestrak.org/NORAD/elements/iridium-33-debris.txt',
+    'gps':      'https://celestrak.org/NORAD/elements/gps-ops.txt',
+    'glonass':  'https://celestrak.org/NORAD/elements/glo-ops.txt',
 }
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
